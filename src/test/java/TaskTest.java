@@ -12,24 +12,21 @@ import java.util.concurrent.TimeUnit;
 public class TaskTest {
 
     public static void main(String[] args) {
-        ThreadPoolExecutor workExecutor = new ThreadPoolExecutor(20, 50, 100, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(10));
         ThreadPoolExecutor taskExecutor = new ThreadPoolExecutor(20, 50, 100, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(10));
 
-        TaskScheduler scheduler = new TaskScheduler();
-        TaskNode<String> nodeA = scheduler.begin(() -> new TaskResult<>("taskA", "A1"), System.out::println);
-        TaskNode<String> nodeB = scheduler.begin(() -> new TaskResult<>("taskB", "B1"), System.out::println);
-        TaskNode<String> nodeC = scheduler.begin(() -> new TaskResult<>("taskC", "C1"), System.out::println);
-        TaskNode<String> nodeD = scheduler.and(nodeA, "A1", () -> new TaskResult<>("taskD", "D1"), System.out::println);
-        scheduler.and(nodeB, "B1", nodeD);
-        scheduler.any(nodeC, "C1", nodeD);
+        TaskCondition<String> condition0 = SaggioTask.build("0", () -> new TaskResult<>("success", "0"), System.out::println);
+        TaskCondition<String> conditionA = SaggioTask.build("A", () -> new TaskResult<>("success", "A-D1"), System.out::println);
+        TaskCondition<String> conditionB = SaggioTask.build("B", () -> new TaskResult<>("success", "B-D1"), System.out::println);
+        TaskCondition<String> conditionC = SaggioTask.build("C", () -> new TaskResult<>("success", "C-D1"), System.out::println);
+        TaskCondition<String> conditionD = SaggioTask.build("D", () -> new TaskResult<>("success", "D-E1"), System.out::println);
+        conditionA.fromAnd(condition0, "0");
+        conditionB.fromAnd(condition0, "0");
+        conditionC.fromAnd(condition0, "0");
+        conditionD.fromAnd(conditionA, "A-D1")
+                .fromAnd(conditionB, "B-D1")
+                .fromAnd(conditionC, "C-D1");
 
-//        TaskNode<String> nodeE = scheduler.serial(nodeD, "D1", () -> new TaskResult<>("taskE", "E1"), System.out::println);
-//        TaskNode<String> nodeF = scheduler.serial(nodeE, "E1", () -> new TaskResult<>("taskF", "F1"), System.out::println);
-//        TaskNode<String> nodeG = scheduler.serial(nodeE, "E1", () -> new TaskResult<>("taskG", "G1"), System.out::println);
-//        TaskNode<String> nodeH = scheduler.serial(nodeE, "E1", () -> new TaskResult<>("taskH", "H1"), System.out::println);
-//        TaskNode<String> nodeI = scheduler.serial(nodeE, "E1", () -> new TaskResult<>("taskI", "I1"), System.out::println);
-
-        scheduler.work(workExecutor, taskExecutor);
+        SaggioTask.run(condition0, taskExecutor);
     }
 
 }

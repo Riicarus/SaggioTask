@@ -7,5 +7,5 @@
  */
 public interface Task<T> {
 
-    TaskResult<T> run();
+    TaskResult<T> execute();
 }
