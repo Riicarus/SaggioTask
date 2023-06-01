@@ -92,13 +92,20 @@ public class TaskCondition<T> {
         try {
             canWork.acquire();
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            System.out.println("Condition[" + this + "] acquiring semaphore has been interrupted, caused by: " + e.getCause());
             return;
         }
 
         stopOtherAny();
 
-        TaskResult<T> result = task.execute();
+        TaskResult<T> result;
+        try {
+            result = task.execute();
+        } catch (InterruptedException e) {
+            System.out.println("Executing condition[" + this + "] has been interrupted, caused by: " + e.getCause());
+            currentThread = null;
+            return;
+        }
         callback.execute(result);
         currentThread = null;
         executed = true;

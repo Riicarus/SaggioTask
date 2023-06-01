@@ -7,5 +7,5 @@
  */
 public interface Task<T> {
 
-    TaskResult<T> execute();
+    TaskResult<T> execute() throws InterruptedException;
 }

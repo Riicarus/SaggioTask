@@ -17,12 +17,7 @@ public class TaskTest {
         TaskCondition<String> condition0 = SaggioTask.build("0", () -> new TaskResult<>("success", "0"), System.out::println);
         TaskCondition<String> conditionA = SaggioTask.build("A", () -> new TaskResult<>("success", "A-D1"), System.out::println);
         TaskCondition<String> conditionB = SaggioTask.build("B", () -> {
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                return new TaskResult<>("fail", "fail");
-            }
+            Thread.sleep(1000);
             return new TaskResult<>("success", "B-D1");
         }, System.out::println);
         TaskCondition<String> conditionC = SaggioTask.build("C", () -> new TaskResult<>("success", "C-D1"), System.out::println);
