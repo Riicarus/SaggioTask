@@ -96,6 +96,8 @@ public class TaskCondition<T> {
             return;
         }
 
+        stopOtherAny();
+
         TaskResult<T> result = task.execute();
         callback.execute(result);
         currentThread = null;
@@ -166,6 +168,19 @@ public class TaskCondition<T> {
         }
     }
 
+    private void stopOtherAny() {
+        if (ConditionType.ANY.equals(type)) {
+            for (TaskCondition<?> prevCondition : prevConditions) {
+                if (prevCondition.isExecuting()) {
+                    try {
+                        prevCondition.getCurrentThread().interrupt();
+                    } catch (NullPointerException ignored) {
+                    }
+                }
+            }
+        }
+    }
+
     public String getName() {
         return name;
     }
@@ -190,7 +205,7 @@ public class TaskCondition<T> {
         return currentThread;
     }
 
-    private void addPrevCondition(TaskCondition<?> ...conditions) {
+    private void addPrevCondition(TaskCondition<?>... conditions) {
         prevConditions.addAll(Arrays.stream(conditions).toList());
     }
 
