@@ -3,6 +3,7 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -33,6 +34,10 @@ public class TaskCondition<T> {
 
     private final Lock joinLock = new ReentrantLock();
 
+    private int timeout = 3000;
+
+    private TimeUnit timeUnit = TimeUnit.MILLISECONDS;
+
     private volatile boolean executed = false;
 
     /**
@@ -40,10 +45,13 @@ public class TaskCondition<T> {
      */
     private volatile Thread currentThread;
 
-    public TaskCondition(String name, Task<T> task, TaskCallback<T> callback) {
-        this.name = name + "-" + SaggioTask.generateId();
+    private final SaggioTask saggioTask;
+
+    public TaskCondition(String name, Task<T> task, TaskCallback<T> callback, SaggioTask saggioTask) {
+        this.name = name + "-" + saggioTask.generateId();
         this.task = task;
         this.callback = callback;
+        this.saggioTask = saggioTask;
     }
 
     public TaskCondition<?> fromAny(TaskCondition<?> prev, String state) {
@@ -53,7 +61,7 @@ public class TaskCondition<T> {
             throw new RuntimeException("Type is already set to 'AND', can not add condition of type 'ANY', condition: " + this);
         }
 
-        TaskPushDownTable.add(prev, state, this);
+        saggioTask.getPushDownTable().add(prev, state, this);
         this.addPrevCondition(prev);
 
         return this;
@@ -66,7 +74,7 @@ public class TaskCondition<T> {
             throw new RuntimeException("Type is already set to 'ANY', can not add condition of type 'AND', condition: " + this);
         }
 
-        TaskPushDownTable.add(prev, state, this);
+        saggioTask.getPushDownTable().add(prev, state, this);
         this.addPrevCondition(prev);
 
         return this;
@@ -90,19 +98,40 @@ public class TaskCondition<T> {
         }
 
         try {
-            canWork.acquire();
+            if (!canWork.tryAcquire(timeout, timeUnit)) {
+                // if acquire timeout
+                System.out.println("Condition[" + this + "] acquiring semaphore has been stopped, caused by: timeout");
+
+                // if the destination condition is waiting out of time, the prev conditions are not needed to be executed.
+                stopPrevAnd();
+                stopPrevAny();
+                return;
+            }
         } catch (InterruptedException e) {
             System.out.println("Condition[" + this + "] acquiring semaphore has been interrupted, caused by: " + e.getCause());
+
+            // if the destination condition is waiting interrupted, the prev conditions are not needed to be executed.
+            stopPrevAnd();
+            stopPrevAny();
+            currentThread = null;
             return;
         }
 
-        stopOtherAny();
+        // if one any arrived, then other prev any conditions are not needed to be executed.
+        stopPrevAny();
 
         TaskResult<T> result;
         try {
             result = task.execute();
         } catch (InterruptedException e) {
             System.out.println("Executing condition[" + this + "] has been interrupted, caused by: " + e.getCause());
+
+            /*
+               TODO: to be optimized: may be we can stop the destination condition's prev conditions,
+                but it's hard to get the destination now as the destination condition is decided by task result,
+                which is given after task execution.
+              */
+
             currentThread = null;
             return;
         }
@@ -114,7 +143,7 @@ public class TaskCondition<T> {
     }
 
     private void next(String state, ThreadPoolExecutor executor) {
-        HashSet<TaskCondition<?>> nextConditions = TaskPushDownTable.getNextConditions(this, state);
+        HashSet<TaskCondition<?>> nextConditions = saggioTask.getPushDownTable().getNextConditions(this, state);
         if (nextConditions == null || nextConditions.isEmpty()) {
             return;
         }
@@ -139,7 +168,7 @@ public class TaskCondition<T> {
         try {
             joinLock.lock();
 
-//            System.out.println(prevCondition + " join to " + this + " , thread: " + Thread.currentThread());
+            // System.out.println(prevCondition + " join to " + this + " , thread: " + Thread.currentThread());
 
             if (isExecuted()) {
                 return;
@@ -155,7 +184,7 @@ public class TaskCondition<T> {
                 } else if (ConditionType.AND.equals(type)) {
                     if (notArrivedCount.decrementAndGet() == 0) {
                         canWork.release();
-//                        System.out.println(this + " released");
+                        // System.out.println(this + " released");
                     }
                 }
 
@@ -164,7 +193,7 @@ public class TaskCondition<T> {
                 if (ConditionType.AND.equals(type)) {
                     if (notArrivedCount.decrementAndGet() == 0) {
                         canWork.release();
-//                        System.out.println(this + " released");
+                        // System.out.println(this + " released");
                     }
                 }
             }
@@ -175,11 +204,26 @@ public class TaskCondition<T> {
         }
     }
 
-    private void stopOtherAny() {
+    private void stopPrevAny() {
         if (ConditionType.ANY.equals(type)) {
             for (TaskCondition<?> prevCondition : prevConditions) {
                 if (prevCondition.isExecuting()) {
                     try {
+                        System.out.println("Executing condition[" + this + "] has been interrupted, caused by: stopPrevAny()");
+                        prevCondition.getCurrentThread().interrupt();
+                    } catch (NullPointerException ignored) {
+                    }
+                }
+            }
+        }
+    }
+
+    private void stopPrevAnd() {
+        if (ConditionType.AND.equals(type)) {
+            for (TaskCondition<?> prevCondition : prevConditions) {
+                if (prevCondition.isExecuting()) {
+                    try {
+                        System.out.println("Executing condition[" + this + "] has been interrupted, caused by: stopPrevAnd()");
                         prevCondition.getCurrentThread().interrupt();
                     } catch (NullPointerException ignored) {
                     }
@@ -214,6 +258,19 @@ public class TaskCondition<T> {
 
     private void addPrevCondition(TaskCondition<?>... conditions) {
         prevConditions.addAll(Arrays.stream(conditions).toList());
+    }
+
+    public int getTimeout() {
+        return timeout;
+    }
+
+    public TimeUnit getTimeUnit() {
+        return timeUnit;
+    }
+
+    public void setTimeout(int timeout, TimeUnit timeUnit) {
+        this.timeout = timeout;
+        this.timeUnit = timeUnit;
     }
 
     @Override

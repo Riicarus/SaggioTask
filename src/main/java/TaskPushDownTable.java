@@ -11,9 +11,9 @@ import java.util.HashSet;
  */
 public class TaskPushDownTable {
 
-    private static final HashMap<TaskCondition<?>, HashMap<String, HashSet<TaskCondition<?>>>> pushDownTable = new HashMap<>();
+    private final HashMap<TaskCondition<?>, HashMap<String, HashSet<TaskCondition<?>>>> pushDownTable = new HashMap<>();
 
-    public static HashSet<TaskCondition<?>> getNextConditions(TaskCondition<?> condition, String state) {
+    public HashSet<TaskCondition<?>> getNextConditions(TaskCondition<?> condition, String state) {
         HashMap<String, HashSet<TaskCondition<?>>> nextConditions;
 
         if ((nextConditions = pushDownTable.get(condition)) != null) {
@@ -23,7 +23,7 @@ public class TaskPushDownTable {
         return null;
     }
 
-    public static void add(TaskCondition<?> now, String state, TaskCondition<?> then) {
+    public void add(TaskCondition<?> now, String state, TaskCondition<?> then) {
         HashMap<String, HashSet<TaskCondition<?>>> nextConditions;
         HashSet<TaskCondition<?>> conditionsOfState;
 

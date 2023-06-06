@@ -11,17 +11,26 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class SaggioTask {
 
-    private static final AtomicInteger taskConditionCount = new AtomicInteger(0);
+    private final AtomicInteger taskConditionCount = new AtomicInteger(0);
 
-    public static <T> TaskCondition<T> build(String name, Task<T> task, TaskCallback<T> callback) {
-        return new TaskCondition<>(name, task, callback);
+    private final TaskPushDownTable PUSH_DOWN_TABLE = new TaskPushDownTable();
+
+    public SaggioTask() {
     }
 
-    public static void run(TaskCondition<?> condition, ThreadPoolExecutor executor) {
+    public <T> TaskCondition<T> build(String name, Task<T> task, TaskCallback<T> callback) {
+        return new TaskCondition<>(name, task, callback, this);
+    }
+
+    public void run(TaskCondition<?> condition, ThreadPoolExecutor executor) {
         executor.execute(() -> condition.begin(executor));
     }
 
-    protected static int generateId() {
+    protected int generateId() {
         return taskConditionCount.getAndIncrement();
+    }
+
+    public TaskPushDownTable getPushDownTable() {
+        return PUSH_DOWN_TABLE;
     }
 }
