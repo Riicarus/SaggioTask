@@ -34,7 +34,8 @@ public class TaskConfig {
         return stopIfNextStopped;
     }
 
-    public void setStopIfNextStopped(boolean stopIfNextStopped) {
+    public TaskConfig setStopIfNextStopped(boolean stopIfNextStopped) {
         this.stopIfNextStopped = stopIfNextStopped;
+        return this;
     }
 }
