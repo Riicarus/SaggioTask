@@ -7,6 +7,6 @@
  */
 public interface TaskCallback<T> {
 
-    void execute(TaskResult<T> result);
+    void execute(TaskResult<T> result, TaskContext context);
 
 }

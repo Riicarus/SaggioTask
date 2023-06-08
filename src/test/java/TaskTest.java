@@ -16,25 +16,28 @@ public class TaskTest {
 
         SaggioTask saggioTask = new SaggioTask();
 
-        TaskCondition<String> condition0 = saggioTask.build("0", () -> new TaskResult<>("success", "0"), System.out::println);
-        TaskCondition<String> conditionA = saggioTask.build("A", () -> new TaskResult<>("success", "A-D1"), System.out::println);
-        TaskCondition<String> conditionB = saggioTask.build("B", () -> {
+        TaskCondition<String> condition0 = saggioTask.build("0", (ctx) -> new TaskResult<>("success", "0"), (res, ctx) -> System.out.println(res));
+        TaskCondition<String> conditionA = saggioTask.build("A", (ctx) -> new TaskResult<>("success", "A-D1"), (res, ctx) -> System.out.println(res));
+        TaskCondition<String> conditionB = saggioTask.build("B", (ctx) -> {
             Thread.sleep(4000);
             return new TaskResult<>("success", "B-D1");
-        }, System.out::println);
-        TaskCondition<String> conditionC = saggioTask.build("C", () -> {
+        }, (res, ctx) -> System.out.println(res));
+        TaskCondition<String> conditionC = saggioTask.build("C", (ctx) -> {
             Thread.sleep(4000);
             return new TaskResult<>("success", "C-D1");
-        }, System.out::println);
-        TaskCondition<String> conditionD = saggioTask.build("D", () -> new TaskResult<>("success", "D-E1"), System.out::println);
+        }, (res, ctx) -> System.out.println(res));
+        TaskCondition<String> conditionD = saggioTask.build("D", (ctx) -> new TaskResult<>("success", "D-E1"), (res, ctx) -> System.out.println(res));
         conditionA.fromAnd(condition0, "0");
         conditionB.fromAnd(condition0, "0");
         conditionC.fromAnd(condition0, "0");
         conditionD.fromAnd(conditionA, "A-D1")
                 .fromAnd(conditionB, "B-D1")
-                .fromAnd(conditionC, "C-D1");
+                .fromAnd(conditionC, "C-D1")
+                .setTimeout(5000, TimeUnit.MILLISECONDS);
 
-        saggioTask.run(condition0, taskExecutor);
+        TaskContext context = new TaskContext();
+        context.getConfig().setTimeout(1000, TimeUnit.MILLISECONDS);
+        saggioTask.run(condition0, taskExecutor, context);
     }
 
 }

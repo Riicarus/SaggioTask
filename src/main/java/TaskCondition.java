@@ -34,6 +34,8 @@ public class TaskCondition<T> {
 
     private final Lock joinLock = new ReentrantLock();
 
+    private boolean useCustomizedTimeout = false;
+
     private int timeout = 3000;
 
     private TimeUnit timeUnit = TimeUnit.MILLISECONDS;
@@ -80,33 +82,51 @@ public class TaskCondition<T> {
         return this;
     }
 
-    protected void begin(ThreadPoolExecutor executor) {
+    protected void begin(ThreadPoolExecutor executor, TaskContext context) {
         canWork.release();
 
-        execute(executor, true);
+        execute(executor, context, true);
     }
 
-    protected void execute(ThreadPoolExecutor executor) {
-        execute(executor, false);
+    protected void execute(ThreadPoolExecutor executor, TaskContext context) {
+        execute(executor, context, false);
     }
 
-    protected void execute(ThreadPoolExecutor executor, boolean isBegin) {
+    protected void execute(ThreadPoolExecutor executor, TaskContext context, boolean isBegin) {
         currentThread = Thread.currentThread();
 
         if (!isBegin) {
             joinLock.unlock();
         }
 
+        if (!waitToWork(context)) {
+            return;
+        }
+
+        // if one any arrived, then other prev any conditions are not needed to be executed.
+        stopPrevAny();
+
+        TaskResult<T> result = doExecute(context);
+
+        next(result.getState(), executor, context);
+    }
+
+    private boolean waitToWork(TaskContext context) {
+        int _timeout = useCustomizedTimeout ? timeout : context.getConfig().getTimeout();
+        TimeUnit _timeUnit = useCustomizedTimeout ? timeUnit : context.getConfig().getTimeUnit();
+
         try {
-            if (!canWork.tryAcquire(timeout, timeUnit)) {
+            if (!canWork.tryAcquire(_timeout, _timeUnit)) {
                 // if acquire timeout
-                System.out.println("Condition[" + this + "] acquiring semaphore has been stopped, caused by: timeout");
+                System.out.println("Condition[" + this + "] acquiring semaphore has been stopped, caused by: timeout--" + _timeout + " " + _timeUnit);
 
                 // if the destination condition is waiting out of time, the prev conditions are not needed to be executed.
                 stopPrevAnd();
                 stopPrevAny();
-                return;
+                return false;
             }
+
+            return true;
         } catch (InterruptedException e) {
             System.out.println("Condition[" + this + "] acquiring semaphore has been interrupted, caused by: " + e.getCause());
 
@@ -114,15 +134,19 @@ public class TaskCondition<T> {
             stopPrevAnd();
             stopPrevAny();
             currentThread = null;
-            return;
+            return false;
         }
+    }
 
-        // if one any arrived, then other prev any conditions are not needed to be executed.
-        stopPrevAny();
-
+    private TaskResult<T> doExecute(TaskContext context) {
         TaskResult<T> result;
         try {
-            result = task.execute();
+            result = task.execute(context);
+            callback.execute(result, context);
+            currentThread = null;
+            executed = true;
+
+            return result;
         } catch (InterruptedException e) {
             System.out.println("Executing condition[" + this + "] has been interrupted, caused by: " + e.getCause());
 
@@ -133,31 +157,27 @@ public class TaskCondition<T> {
               */
 
             currentThread = null;
-            return;
+            return new TaskResult<>(null, null);
         }
-        callback.execute(result);
-        currentThread = null;
-        executed = true;
 
-        next(result.getState(), executor);
     }
 
-    private void next(String state, ThreadPoolExecutor executor) {
+    private void next(String state, ThreadPoolExecutor executor, TaskContext context) {
         HashSet<TaskCondition<?>> nextConditions = saggioTask.getPushDownTable().getNextConditions(this, state);
         if (nextConditions == null || nextConditions.isEmpty()) {
             return;
         }
 
-        executedAllNext(nextConditions, executor);
+        executedAllNext(nextConditions, executor, context);
     }
 
-    private void executedAllNext(HashSet<TaskCondition<?>> nextConditions, ThreadPoolExecutor executor) {
+    private void executedAllNext(HashSet<TaskCondition<?>> nextConditions, ThreadPoolExecutor executor, TaskContext context) {
         for (TaskCondition<?> nextCondition : nextConditions) {
-            executor.execute(() -> nextCondition.join(this, executor));
+            executor.execute(() -> nextCondition.join(this, executor, context));
         }
     }
 
-    private void join(TaskCondition<?> prevCondition, ThreadPoolExecutor executor) {
+    private void join(TaskCondition<?> prevCondition, ThreadPoolExecutor executor, TaskContext context) {
         boolean isBoot = false;
 
         // optimize
@@ -167,8 +187,6 @@ public class TaskCondition<T> {
 
         try {
             joinLock.lock();
-
-            // System.out.println(prevCondition + " join to " + this + " , thread: " + Thread.currentThread());
 
             if (isExecuted()) {
                 return;
@@ -184,16 +202,13 @@ public class TaskCondition<T> {
                 } else if (ConditionType.AND.equals(type)) {
                     if (notArrivedCount.decrementAndGet() == 0) {
                         canWork.release();
-                        // System.out.println(this + " released");
                     }
                 }
-
-                execute(executor);
+                execute(executor, context);
             } else {
                 if (ConditionType.AND.equals(type)) {
                     if (notArrivedCount.decrementAndGet() == 0) {
                         canWork.release();
-                        // System.out.println(this + " released");
                     }
                 }
             }
@@ -271,6 +286,7 @@ public class TaskCondition<T> {
     public void setTimeout(int timeout, TimeUnit timeUnit) {
         this.timeout = timeout;
         this.timeUnit = timeUnit;
+        this.useCustomizedTimeout = true;
     }
 
     @Override

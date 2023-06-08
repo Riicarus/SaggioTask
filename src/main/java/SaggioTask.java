@@ -22,8 +22,8 @@ public class SaggioTask {
         return new TaskCondition<>(name, task, callback, this);
     }
 
-    public void run(TaskCondition<?> condition, ThreadPoolExecutor executor) {
-        executor.execute(() -> condition.begin(executor));
+    public void run(TaskCondition<?> condition, ThreadPoolExecutor executor, TaskContext context) {
+        executor.execute(() -> condition.begin(executor, context));
     }
 
     protected int generateId() {
