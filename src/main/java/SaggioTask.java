@@ -22,6 +22,12 @@ public class SaggioTask {
         return new TaskCondition<>(name, task, callback, this);
     }
 
+    public <T> TaskCondition<T> build(String name, PrevTaskFunction prevFunc, Task<T> task, TaskCallback<T> callback) {
+        TaskCondition<T> condition = new TaskCondition<>(name, task, callback, this);
+        condition.setPrevFunc(prevFunc);
+        return condition;
+    }
+
     public void run(TaskCondition<?> condition, ThreadPoolExecutor executor, TaskContext context) {
         executor.execute(() -> condition.begin(executor, context));
     }

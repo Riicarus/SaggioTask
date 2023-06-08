@@ -22,6 +22,8 @@ public class TaskCondition<T> {
 
     private ConditionType type;
 
+    private PrevTaskFunction prevFunc;
+
     private final Task<T> task;
 
     private final TaskCallback<T> callback;
@@ -139,6 +141,8 @@ public class TaskCondition<T> {
     }
 
     private TaskResult<T> doExecute(TaskContext context) {
+        prevFunc.execute(context);
+
         TaskResult<T> result;
         try {
             result = task.execute(context);
@@ -253,6 +257,10 @@ public class TaskCondition<T> {
 
     public ConditionType getType() {
         return type;
+    }
+
+    public void setPrevFunc(PrevTaskFunction prevFunc) {
+        this.prevFunc = prevFunc;
     }
 
     public HashSet<TaskCondition<?>> getPrevConditions() {
