@@ -106,7 +106,7 @@ public class TaskCondition<T> {
         }
 
         // if one any arrived, then other prev any conditions are not needed to be executed.
-        stopPrevAny();
+        stopPrevAny(context);
 
         TaskResult<T> result = doExecute(context);
 
@@ -123,8 +123,8 @@ public class TaskCondition<T> {
                 System.out.println("Condition[" + this + "] acquiring semaphore has been stopped, caused by: timeout--" + _timeout + " " + _timeUnit);
 
                 // if the destination condition is waiting out of time, the prev conditions are not needed to be executed.
-                stopPrevAnd();
-                stopPrevAny();
+                stopPrevAnd(context);
+                stopPrevAny(context);
                 return false;
             }
 
@@ -133,15 +133,17 @@ public class TaskCondition<T> {
             System.out.println("Condition[" + this + "] acquiring semaphore has been interrupted, caused by: " + e.getCause());
 
             // if the destination condition is waiting interrupted, the prev conditions are not needed to be executed.
-            stopPrevAnd();
-            stopPrevAny();
+            stopPrevAnd(context);
+            stopPrevAny(context);
             currentThread = null;
             return false;
         }
     }
 
     private TaskResult<T> doExecute(TaskContext context) {
-        prevFunc.execute(context);
+        if (prevFunc != null) {
+            prevFunc.execute(context);
+        }
 
         TaskResult<T> result;
         try {
@@ -159,6 +161,9 @@ public class TaskCondition<T> {
                 but it's hard to get the destination now as the destination condition is decided by task result,
                 which is given after task execution.
               */
+            // if the destination condition is executing interrupted, the prev conditions are not needed to be executed.
+            stopPrevAnd(context);
+            stopPrevAny(context);
 
             currentThread = null;
             return new TaskResult<>(null, null);
@@ -223,7 +228,11 @@ public class TaskCondition<T> {
         }
     }
 
-    private void stopPrevAny() {
+    private void stopPrevAny(TaskContext context) {
+        if (!context.getConfig().isStopIfNextStopped()) {
+            return;
+        }
+
         if (ConditionType.ANY.equals(type)) {
             for (TaskCondition<?> prevCondition : prevConditions) {
                 if (prevCondition.isExecuting()) {
@@ -237,7 +246,11 @@ public class TaskCondition<T> {
         }
     }
 
-    private void stopPrevAnd() {
+    private void stopPrevAnd(TaskContext context) {
+        if (!context.getConfig().isStopIfNextStopped()) {
+            return;
+        }
+
         if (ConditionType.AND.equals(type)) {
             for (TaskCondition<?> prevCondition : prevConditions) {
                 if (prevCondition.isExecuting()) {

@@ -11,8 +11,9 @@ import java.util.concurrent.TimeUnit;
 public class TaskConfig {
 
     private int timeout = 3000;
-
     private TimeUnit timeUnit = TimeUnit.MILLISECONDS;
+
+    private boolean stopIfNextStopped = true;
 
     public int getTimeout() {
         return timeout;
@@ -26,5 +27,14 @@ public class TaskConfig {
 
     public TimeUnit getTimeUnit() {
         return timeUnit;
+    }
+
+    @SuppressWarnings("all")
+    public boolean isStopIfNextStopped() {
+        return stopIfNextStopped;
+    }
+
+    public void setStopIfNextStopped(boolean stopIfNextStopped) {
+        this.stopIfNextStopped = stopIfNextStopped;
     }
 }

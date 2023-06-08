@@ -30,13 +30,15 @@ public class TaskTest {
         conditionA.fromAnd(condition0, "0");
         conditionB.fromAnd(condition0, "0");
         conditionC.fromAnd(condition0, "0");
-        conditionD.fromAnd(conditionA, "A-D1")
-                .fromAnd(conditionB, "B-D1")
-                .fromAnd(conditionC, "C-D1")
+        conditionD.fromAny(conditionA, "A-D1")
+                .fromAny(conditionB, "B-D1")
+                .fromAny(conditionC, "C-D1")
                 .setTimeout(5000, TimeUnit.MILLISECONDS);
 
         TaskContext context = new TaskContext();
         context.getConfig().setTimeout(1000, TimeUnit.MILLISECONDS);
+//        context.getConfig().setStopIfNextStopped(false);
+        context.getConfig().setStopIfNextStopped(true);
         saggioTask.run(condition0, taskExecutor, context);
     }
 
