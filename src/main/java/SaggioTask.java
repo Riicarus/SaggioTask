@@ -28,6 +28,10 @@ public class SaggioTask {
         return condition;
     }
 
+    public <T> TaskCondition<T> buildFrom(String name, TaskCondition<T> srcCondition) {
+        return build(name, srcCondition.getPrevFunc(), srcCondition.getTask(), srcCondition.getCallback());
+    }
+
     public void run(TaskCondition<?> condition, ThreadPoolExecutor executor, TaskContext context) {
         executor.execute(() -> condition.begin(executor, context));
     }

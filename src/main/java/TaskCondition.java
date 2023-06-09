@@ -1,4 +1,5 @@
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.concurrent.Semaphore;
@@ -36,12 +37,6 @@ public class TaskCondition<T> {
 
     private final Lock joinLock = new ReentrantLock();
 
-    private boolean useCustomizedTimeout = false;
-
-    private int timeout = 3000;
-
-    private TimeUnit timeUnit = TimeUnit.MILLISECONDS;
-
     private volatile boolean executed = false;
 
     /**
@@ -50,6 +45,12 @@ public class TaskCondition<T> {
     private volatile Thread currentThread;
 
     private final SaggioTask saggioTask;
+
+    private boolean useCustomizedTimeout = false;
+
+    private int timeout = 3000;
+
+    private TimeUnit timeUnit = TimeUnit.MILLISECONDS;
 
     public TaskCondition(String name, Task<T> task, TaskCallback<T> callback, SaggioTask saggioTask) {
         this.name = name + "-" + saggioTask.generateId();
@@ -125,6 +126,7 @@ public class TaskCondition<T> {
                 // if the destination condition is waiting out of time, the prev conditions are not needed to be executed.
                 stopPrevAnd(context);
                 stopPrevAny(context);
+                tryStopAfterPrev(context);
                 return false;
             }
 
@@ -135,6 +137,7 @@ public class TaskCondition<T> {
             // if the destination condition is waiting interrupted, the prev conditions are not needed to be executed.
             stopPrevAnd(context);
             stopPrevAny(context);
+            tryStopAfterPrev(context);
             currentThread = null;
             return false;
         }
@@ -156,14 +159,10 @@ public class TaskCondition<T> {
         } catch (InterruptedException e) {
             System.out.println("Executing condition[" + this + "] has been interrupted, caused by: " + e.getCause());
 
-            /*
-               TODO: to be optimized: may be we can stop the destination condition's prev conditions,
-                but it's hard to get the destination now as the destination condition is decided by task result,
-                which is given after task execution.
-              */
             // if the destination condition is executing interrupted, the prev conditions are not needed to be executed.
             stopPrevAnd(context);
             stopPrevAny(context);
+            tryStopAfterPrev(context);
 
             currentThread = null;
             return new TaskResult<>(null, null);
@@ -264,6 +263,42 @@ public class TaskCondition<T> {
         }
     }
 
+    private void tryStopAfterPrev(TaskContext context) {
+        if (!context.getConfig().isStopIfNextStopped()) {
+            return;
+        }
+
+        final HashMap<String, HashSet<TaskCondition<?>>> nextConditions = saggioTask.getPushDownTable().getNextConditions(this);
+        if (nextConditions == null) {
+            return;
+        }
+
+        for (HashSet<TaskCondition<?>> conditions : nextConditions.values()) {
+            for (TaskCondition<?> condition : conditions) {
+                if (ConditionType.AND.equals(condition.getType())) {
+                    if (condition.isExecuting()) {
+                        try {
+                            System.out.println("Executing condition[" + this + "] has been interrupted, caused by: tryStopAfterPrev()");
+                            condition.getCurrentThread().interrupt();
+                        } catch (NullPointerException ignored) {
+                        }
+                    }
+                }
+
+                if (ConditionType.ANY.equals(condition.getType())) {
+                    if (condition.isExecuting() && condition.notArrivedCount.get() == 1) {
+                        // if only current task has not arrived, stop its next task
+                        try {
+                            System.out.println("Executing condition[" + this + "] has been interrupted, caused by: tryStopAfterPrev()");
+                            condition.getCurrentThread().interrupt();
+                        } catch (NullPointerException ignored) {
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     public String getName() {
         return name;
     }
@@ -274,6 +309,18 @@ public class TaskCondition<T> {
 
     public void setPrevFunc(PrevTaskFunction prevFunc) {
         this.prevFunc = prevFunc;
+    }
+
+    protected PrevTaskFunction getPrevFunc() {
+        return prevFunc;
+    }
+
+    protected Task<T> getTask() {
+        return task;
+    }
+
+    protected TaskCallback<T> getCallback() {
+        return callback;
     }
 
     public HashSet<TaskCondition<?>> getPrevConditions() {

@@ -23,6 +23,10 @@ public class TaskPushDownTable {
         return null;
     }
 
+    public HashMap<String, HashSet<TaskCondition<?>>> getNextConditions(TaskCondition<?> condition) {
+        return pushDownTable.get(condition);
+    }
+
     public void add(TaskCondition<?> now, String state, TaskCondition<?> then) {
         HashMap<String, HashSet<TaskCondition<?>>> nextConditions;
         HashSet<TaskCondition<?>> conditionsOfState;
