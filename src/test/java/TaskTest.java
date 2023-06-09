@@ -1,3 +1,5 @@
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -43,7 +45,10 @@ public class TaskTest {
         context.getConfig().setTimeout(1000, TimeUnit.MILLISECONDS);
 //        context.getConfig().setStopIfNextStopped(false);
         context.getConfig().setStopIfNextStopped(false);
-        saggioTask.run(condition0, taskExecutor, context);
+
+        List<TaskCondition<?>> startConditions = new ArrayList<>();
+        startConditions.add(condition0);
+        saggioTask.run(startConditions, taskExecutor, context);
     }
 
 }

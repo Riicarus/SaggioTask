@@ -19,37 +19,32 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class TaskCondition<T> {
 
+    // core attributes
     private final String name;
-
     private ConditionType type;
-
-    private PrevTaskFunction prevFunc;
-
-    private final Task<T> task;
-
-    private final TaskCallback<T> callback;
-
     private final HashSet<TaskCondition<?>> prevConditions = new HashSet<>();
 
-    private final AtomicInteger notArrivedCount = new AtomicInteger();
+    // condition's executable function interfaces
+    private PrevTaskFunction prevFunc;
+    private final Task<T> task;
+    private final TaskCallback<T> callback;
 
+    // locks and concurrent-working arrangement attributes
     private final Semaphore canWork = new Semaphore(0);
-
     private final Lock joinLock = new ReentrantLock();
-
+    private final AtomicInteger notArrivedCount = new AtomicInteger();
     private volatile boolean executed = false;
-
     /**
      * The thread which is executing execute() method, may be block by canWork.acquire() and will be set to null when executed.
      */
     private volatile Thread currentThread;
 
+    // push-down table maintainer
     private final SaggioTask saggioTask;
 
+    // customized setting attributes
     private boolean useCustomizedTimeout = false;
-
     private int timeout = 3000;
-
     private TimeUnit timeUnit = TimeUnit.MILLISECONDS;
 
     public TaskCondition(String name, Task<T> task, TaskCallback<T> callback, SaggioTask saggioTask) {
@@ -59,6 +54,13 @@ public class TaskCondition<T> {
         this.saggioTask = saggioTask;
     }
 
+    /**
+     * link previous task condition to current one, meaning that if any previous conditions executed successfully and returned the given state, current condition will be executed.
+     *
+     * @param prev previous task condition
+     * @param state transfer state
+     * @return current task condition
+     */
     public TaskCondition<?> fromAny(TaskCondition<?> prev, String state) {
         if (type == null) {
             type = ConditionType.ANY;
@@ -72,6 +74,13 @@ public class TaskCondition<T> {
         return this;
     }
 
+    /**
+     * link previous task condition to current one, meaning that if all previous conditions executed successfully and returned the given state, current condition will be executed.
+     *
+     * @param prev previous task condition
+     * @param state transfer state
+     * @return current task condition
+     */
     public TaskCondition<?> fromAnd(TaskCondition<?> prev, String state) {
         if (type == null) {
             type = ConditionType.AND;
@@ -85,16 +94,39 @@ public class TaskCondition<T> {
         return this;
     }
 
+    /**
+     * task execute as the serial-tasks' beginning node
+     *
+     * @param executor thread pool
+     * @param context TaskContext
+     */
     protected void begin(ThreadPoolExecutor executor, TaskContext context) {
         canWork.release();
 
         execute(executor, context, true);
     }
 
+    /**
+     * task condition's executed method, the condition will wait
+     * till all/any prev task conditions arriving according to the condition type,
+     * or end to meet the timeout or being interrupted.
+     *
+     * @param executor thread pool
+     * @param context TaskContext
+     */
     protected void execute(ThreadPoolExecutor executor, TaskContext context) {
         execute(executor, context, false);
     }
 
+    /**
+     * task condition's executed method, the condition will wait
+     * till all/any prev task conditions arriving according to the condition type,
+     * or end to meet the timeout or being interrupted.
+     *
+     * @param executor thread pool
+     * @param context TaskContext
+     * @param isBegin is begin() execute, is is, the condition will be immediately executed without any waiting
+     */
     protected void execute(ThreadPoolExecutor executor, TaskContext context, boolean isBegin) {
         currentThread = Thread.currentThread();
 
@@ -114,6 +146,13 @@ public class TaskCondition<T> {
         next(result.getState(), executor, context);
     }
 
+    /**
+     * wait till all/any prev task conditions arriving according to the condition type,
+     * or end to meet the timeout or being interrupted
+     *
+     * @param context TaskContext
+     * @return if can work
+     */
     private boolean waitToWork(TaskContext context) {
         int _timeout = useCustomizedTimeout ? timeout : context.getConfig().getTimeout();
         TimeUnit _timeUnit = useCustomizedTimeout ? timeUnit : context.getConfig().getTimeUnit();
@@ -126,7 +165,7 @@ public class TaskCondition<T> {
                 // if the destination condition is waiting out of time, the prev conditions are not needed to be executed.
                 stopPrevAnd(context);
                 stopPrevAny(context);
-                tryStopAfterPrev(context);
+                stopAfterPrev(context);
                 return false;
             }
 
@@ -137,12 +176,18 @@ public class TaskCondition<T> {
             // if the destination condition is waiting interrupted, the prev conditions are not needed to be executed.
             stopPrevAnd(context);
             stopPrevAny(context);
-            tryStopAfterPrev(context);
+            stopAfterPrev(context);
             currentThread = null;
             return false;
         }
     }
 
+    /**
+     * execute prevFunc, task and callback
+     *
+     * @param context TaskContext
+     * @return TaskResult
+     */
     private TaskResult<T> doExecute(TaskContext context) {
         if (prevFunc != null) {
             prevFunc.execute(context);
@@ -162,7 +207,7 @@ public class TaskCondition<T> {
             // if the destination condition is executing interrupted, the prev conditions are not needed to be executed.
             stopPrevAnd(context);
             stopPrevAny(context);
-            tryStopAfterPrev(context);
+            stopAfterPrev(context);
 
             currentThread = null;
             return new TaskResult<>(null, null);
@@ -170,6 +215,13 @@ public class TaskCondition<T> {
 
     }
 
+    /**
+     * jump to and execute all next task conditions
+     *
+     * @param state  transfer state from this to next
+     * @param executor thread pool
+     * @param context TaskContext
+     */
     private void next(String state, ThreadPoolExecutor executor, TaskContext context) {
         HashSet<TaskCondition<?>> nextConditions = saggioTask.getPushDownTable().getNextConditions(this, state);
         if (nextConditions == null || nextConditions.isEmpty()) {
@@ -179,12 +231,26 @@ public class TaskCondition<T> {
         executedAllNext(nextConditions, executor, context);
     }
 
+    /**
+     * execute all next conditions
+     *
+     * @param nextConditions conditions need to be executed
+     * @param executor thread pool
+     * @param context TaskContext
+     */
     private void executedAllNext(HashSet<TaskCondition<?>> nextConditions, ThreadPoolExecutor executor, TaskContext context) {
         for (TaskCondition<?> nextCondition : nextConditions) {
             executor.execute(() -> nextCondition.join(this, executor, context));
         }
     }
 
+    /**
+     * join() is the way to execute the next condition or update next condition's status, according to next condition's working state.
+     *
+     * @param prevCondition previous task condition
+     * @param executor thread pool
+     * @param context TaskContext
+     */
     private void join(TaskCondition<?> prevCondition, ThreadPoolExecutor executor, TaskContext context) {
         boolean isBoot = false;
 
@@ -227,6 +293,11 @@ public class TaskCondition<T> {
         }
     }
 
+    /**
+     * stop the condition's all previous executing conditions if current condition's type is ANY and need to stop according to the setting stopIfNextStopped
+     *
+     * @param context TaskContext
+     */
     private void stopPrevAny(TaskContext context) {
         if (!context.getConfig().isStopIfNextStopped()) {
             return;
@@ -245,6 +316,11 @@ public class TaskCondition<T> {
         }
     }
 
+    /**
+     * stop the condition's all previous executing conditions if current condition's type is AND and need to stop according to the setting stopIfNextStopped
+     *
+     * @param context TaskContext
+     */
     private void stopPrevAnd(TaskContext context) {
         if (!context.getConfig().isStopIfNextStopped()) {
             return;
@@ -263,7 +339,12 @@ public class TaskCondition<T> {
         }
     }
 
-    private void tryStopAfterPrev(TaskContext context) {
+    /**
+     * stop the condition's all next executing conditions' prev conditions if need to stop according to the setting stopIfNextStopped
+     *
+     * @param context TaskContext
+     */
+    private void stopAfterPrev(TaskContext context) {
         if (!context.getConfig().isStopIfNextStopped()) {
             return;
         }
