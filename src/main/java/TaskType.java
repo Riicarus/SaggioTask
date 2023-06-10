@@ -6,14 +6,14 @@
  * @create 2023-6-1 2:36
  * @since 1.0.0
  */
-public enum ConditionType {
+public enum TaskType {
 
     ANY(0),
     AND(1);
 
     private final int value;
 
-    ConditionType(int value) {
+    TaskType(int value) {
         this.value = value;
     }
 

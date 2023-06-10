@@ -3,7 +3,7 @@ import java.util.HashSet;
 
 /**
  * [FEATURE INFO]<br/>
- * push down table of task condition.
+ * push down table of tasks.
  *
  * @author Riicarus
  * @create 2023-6-1 2:45
@@ -11,10 +11,10 @@ import java.util.HashSet;
  */
 public class TaskPushDownTable {
 
-    private final HashMap<TaskCondition<?>, HashMap<String, HashSet<TaskCondition<?>>>> pushDownTable = new HashMap<>();
+    private final HashMap<Task<?>, HashMap<String, HashSet<Task<?>>>> pushDownTable = new HashMap<>();
 
-    public HashSet<TaskCondition<?>> getNextConditions(TaskCondition<?> condition, String state) {
-        HashMap<String, HashSet<TaskCondition<?>>> nextConditions;
+    public HashSet<Task<?>> getNextTasks(Task<?> condition, String state) {
+        HashMap<String, HashSet<Task<?>>> nextConditions;
 
         if ((nextConditions = pushDownTable.get(condition)) != null) {
             return nextConditions.get(state);
@@ -23,13 +23,13 @@ public class TaskPushDownTable {
         return null;
     }
 
-    public HashMap<String, HashSet<TaskCondition<?>>> getNextConditions(TaskCondition<?> condition) {
+    public HashMap<String, HashSet<Task<?>>> getNextTasks(Task<?> condition) {
         return pushDownTable.get(condition);
     }
 
-    public void add(TaskCondition<?> now, String state, TaskCondition<?> then) {
-        HashMap<String, HashSet<TaskCondition<?>>> nextConditions;
-        HashSet<TaskCondition<?>> conditionsOfState;
+    public void add(Task<?> now, String state, Task<?> then) {
+        HashMap<String, HashSet<Task<?>>> nextConditions;
+        HashSet<Task<?>> conditionsOfState;
 
         if ((nextConditions = pushDownTable.get(now)) == null) {
             nextConditions = new HashMap<>();

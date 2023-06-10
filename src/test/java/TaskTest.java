@@ -18,37 +18,37 @@ public class TaskTest {
 
         SaggioTask saggioTask = new SaggioTask();
 
-        TaskCondition<String> condition0 = saggioTask.build("0", (ctx) -> new TaskResult<>("success", "0"), (res, ctx) -> System.out.println(res));
-        TaskCondition<String> conditionA = saggioTask.build("A", (ctx) -> new TaskResult<>("success", "A-D1"), (res, ctx) -> System.out.println(res));
-        TaskCondition<String> conditionB = saggioTask.build("B", (ctx) -> {
+        Task<String> task0 = saggioTask.build("0", (ctx) -> new TaskResult<>("success", "0"), (res, ctx) -> System.out.println(res));
+        Task<String> taskA = saggioTask.build("A", (ctx) -> new TaskResult<>("success", "A-D1"), (res, ctx) -> System.out.println(res));
+        Task<String> taskB = saggioTask.build("B", (ctx) -> {
             Thread.sleep(4000);
             return new TaskResult<>("success", "B-D1");
         }, (res, ctx) -> System.out.println(res));
-        TaskCondition<String> conditionC = saggioTask.build("C", (ctx) -> {
+        Task<String> taskC = saggioTask.build("C", (ctx) -> {
             Thread.sleep(4000);
             return new TaskResult<>("success", "C-DE1");
         }, (res, ctx) -> System.out.println(res));
-        TaskCondition<String> conditionD = saggioTask.build("D", (ctx) -> new TaskResult<>("success", "D-E1"), (res, ctx) -> System.out.println(res));
-        conditionA.fromAnd(condition0, "0");
-        conditionB.fromAnd(condition0, "0");
-        conditionC.fromAnd(condition0, "0");
-        conditionD.fromAny(conditionA, "A-D1")
-                .fromAny(conditionB, "B-D1")
-                .fromAny(conditionC, "C-DE1")
+        Task<String> taskD = saggioTask.build("D", (ctx) -> new TaskResult<>("success", "D-E1"), (res, ctx) -> System.out.println(res));
+        taskA.fromAnd(task0, "0");
+        taskB.fromAnd(task0, "0");
+        taskC.fromAnd(task0, "0");
+        taskD.fromAny(taskA, "A-D1")
+                .fromAny(taskB, "B-D1")
+                .fromAny(taskC, "C-DE1")
                 .setTimeout(5000, TimeUnit.MILLISECONDS);
 
-        TaskCondition<String> conditionE = saggioTask.build("E", (ctx) -> new TaskResult<>("success", "E-F1"), (res, ctx) -> System.out.println(res));
-        conditionE.fromAnd(conditionC, "C-DE1")
-                .fromAnd(conditionD, "D-E1");
+        Task<String> taskE = saggioTask.build("E", (ctx) -> new TaskResult<>("success", "E-F1"), (res, ctx) -> System.out.println(res));
+        taskE.fromAnd(taskC, "C-DE1")
+                .fromAnd(taskD, "D-E1");
 
         TaskContext context = new TaskContext();
         context.getConfig().setTimeout(1000, TimeUnit.MILLISECONDS);
 //        context.getConfig().setStopIfNextStopped(false);
         context.getConfig().setStopIfNextStopped(false);
 
-        List<TaskCondition<?>> startConditions = new ArrayList<>();
-        startConditions.add(condition0);
-        saggioTask.run(startConditions, taskExecutor, context);
+        List<Task<?>> startTasks = new ArrayList<>();
+        startTasks.add(task0);
+        saggioTask.run(startTasks, taskExecutor, context);
     }
 
 }
