@@ -31,8 +31,8 @@ public class SaggioTask {
      * @param <T> type of taskFunction result's data
      * @return initial task
      */
-    public <T> Task<T> build(String name, TaskFunction<T> taskFunction, TaskCallback<T> callback) {
-        return new Task<>(name, taskFunction, callback, this);
+    public <T> TransferableTask<T> build(String name, TaskFunction<T> taskFunction, TaskCallback<T> callback) {
+        return new TransferableTask<>(name, taskFunction, callback, this);
     }
 
     /**
@@ -45,8 +45,8 @@ public class SaggioTask {
      * @param <T> type of taskFunction result's data
      * @return initial task
      */
-    public <T> Task<T> build(String name, PrevTaskFunction prevFunc, TaskFunction<T> taskFunction, TaskCallback<T> callback) {
-        Task<T> task = new Task<>(name, taskFunction, callback, this);
+    public <T> TransferableTask<T> build(String name, PrevTaskFunction prevFunc, TaskFunction<T> taskFunction, TaskCallback<T> callback) {
+        TransferableTask<T> task = new TransferableTask<>(name, taskFunction, callback, this);
         task.setPrevFunc(prevFunc);
         return task;
     }
@@ -59,8 +59,8 @@ public class SaggioTask {
      * @param <T> type of task result's data
      * @return initial task
      */
-    public <T> Task<T> buildFrom(String name, Task<T> srcTask) {
-        return build(name, srcTask.getPrevFunc(), srcTask.getTask(), srcTask.getCallback());
+    public <T> TransferableTask<T> buildFrom(String name, TransferableTask<T> srcTask) {
+        return build(name, srcTask.getPrevFunc(), srcTask.getTaskFunc(), srcTask.getCallback());
     }
 
     /**
@@ -70,8 +70,8 @@ public class SaggioTask {
      * @param executor thread pool
      * @param context TaskContext
      */
-    public void run(List<Task<?>> tasks, ThreadPoolExecutor executor, TaskContext context) {
-        for (Task<?> task : tasks) {
+    public void run(List<TransferableTask<?>> tasks, ThreadPoolExecutor executor, TaskContext context) {
+        for (TransferableTask<?> task : tasks) {
             executor.execute(() -> task.begin(executor, context));
         }
     }

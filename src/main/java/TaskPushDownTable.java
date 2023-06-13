@@ -11,42 +11,42 @@ import java.util.HashSet;
  */
 public class TaskPushDownTable {
 
-    private final HashMap<Task<?>, HashMap<String, HashSet<Task<?>>>> pushDownTable = new HashMap<>();
+    private final HashMap<TransferableTask<?>, HashMap<String, HashSet<TransferableTask<?>>>> pushDownTable = new HashMap<>();
 
-    public HashSet<Task<?>> getNextTasks(Task<?> condition, String state) {
-        HashMap<String, HashSet<Task<?>>> nextConditions;
+    public HashSet<TransferableTask<?>> getNextTasks(TransferableTask<?> task, String state) {
+        HashMap<String, HashSet<TransferableTask<?>>> nextTasks;
 
-        if ((nextConditions = pushDownTable.get(condition)) != null) {
-            return nextConditions.get(state);
+        if ((nextTasks = pushDownTable.get(task)) != null) {
+            return nextTasks.get(state);
         }
 
         return null;
     }
 
-    public HashMap<String, HashSet<Task<?>>> getNextTasks(Task<?> condition) {
-        return pushDownTable.get(condition);
+    public HashMap<String, HashSet<TransferableTask<?>>> getNextTasks(TransferableTask<?> task) {
+        return pushDownTable.get(task);
     }
 
-    public void add(Task<?> now, String state, Task<?> then) {
-        HashMap<String, HashSet<Task<?>>> nextConditions;
-        HashSet<Task<?>> conditionsOfState;
+    public void add(TransferableTask<?> now, String state, TransferableTask<?> then) {
+        HashMap<String, HashSet<TransferableTask<?>>> nextTasks;
+        HashSet<TransferableTask<?>> tasksOfState;
 
-        if ((nextConditions = pushDownTable.get(now)) == null) {
-            nextConditions = new HashMap<>();
-            conditionsOfState = new HashSet<>();
-            conditionsOfState.add(then);
-            nextConditions.put(state, conditionsOfState);
-            pushDownTable.put(now, nextConditions);
+        if ((nextTasks = pushDownTable.get(now)) == null) {
+            nextTasks = new HashMap<>();
+            tasksOfState = new HashSet<>();
+            tasksOfState.add(then);
+            nextTasks.put(state, tasksOfState);
+            pushDownTable.put(now, nextTasks);
             return;
         }
 
-        if ((conditionsOfState = nextConditions.get(state)) == null) {
-            conditionsOfState = new HashSet<>();
-            nextConditions.put(state, conditionsOfState);
+        if ((tasksOfState = nextTasks.get(state)) == null) {
+            tasksOfState = new HashSet<>();
+            nextTasks.put(state, tasksOfState);
             return;
         }
 
-        conditionsOfState.add(then);
+        tasksOfState.add(then);
     }
 
 }

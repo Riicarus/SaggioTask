@@ -18,35 +18,36 @@ public class TaskTest {
 
         SaggioTask saggioTask = new SaggioTask();
 
-        Task<String> task0 = saggioTask.build("0", (ctx) -> new TaskResult<>("success", "0"), (res, ctx) -> System.out.println(res));
-        Task<String> taskA = saggioTask.build("A", (ctx) -> new TaskResult<>("success", "A-D1"), (res, ctx) -> System.out.println(res));
-        Task<String> taskB = saggioTask.build("B", (ctx) -> {
+        TransferableTask<String> task0 = saggioTask.build("0", (ctx) -> new TaskResult<>("success", "0"), (res, ctx) -> System.out.println(res));
+        TransferableTask<String> taskA = saggioTask.build("A", (ctx) -> new TaskResult<>("success", "A-D1"), (res, ctx) -> System.out.println(res));
+        TransferableTask<String> taskB = saggioTask.build("B", (ctx) -> {
             Thread.sleep(4000);
             return new TaskResult<>("success", "B-D1");
         }, (res, ctx) -> System.out.println(res));
-        Task<String> taskC = saggioTask.build("C", (ctx) -> {
+        TransferableTask<String> taskC = saggioTask.build("C", (ctx) -> {
             Thread.sleep(4000);
             return new TaskResult<>("success", "C-DE1");
         }, (res, ctx) -> System.out.println(res));
-        Task<String> taskD = saggioTask.build("D", (ctx) -> new TaskResult<>("success", "D-E1"), (res, ctx) -> System.out.println(res));
-        taskA.fromAnd(task0, "0");
-        taskB.fromAnd(task0, "0");
-        taskC.fromAnd(task0, "0");
-        taskD.fromAny(taskA, "A-D1")
-                .fromAny(taskB, "B-D1")
-                .fromAny(taskC, "C-DE1")
+        TransferableTask<String> taskD = saggioTask.build("D", (ctx) -> new TaskResult<>("success", "D-E1"), (res, ctx) -> System.out.println(res));
+        taskA.and(task0, "0");
+        taskB.and(task0, "0");
+        taskC.and(task0, "0");
+        taskD.any(taskA, "A-D1")
+                .any(taskB, "B-D1")
+                .any(taskC, "C-DE1")
                 .setTimeout(5000, TimeUnit.MILLISECONDS);
 
-        Task<String> taskE = saggioTask.build("E", (ctx) -> new TaskResult<>("success", "E-F1"), (res, ctx) -> System.out.println(res));
-        taskE.fromAnd(taskC, "C-DE1")
-                .fromAnd(taskD, "D-E1");
+        TransferableTask<String> taskE = saggioTask.build("E", (ctx) -> new TaskResult<>("success", "E-F1"), (res, ctx) -> System.out.println(res));
+        taskE.and(taskC, "C-DE1")
+                .and(taskD, "D-E1")
+                .setTimeout(4, TimeUnit.SECONDS);
 
         TaskContext context = new TaskContext();
         context.getConfig().setTimeout(1000, TimeUnit.MILLISECONDS);
 //        context.getConfig().setStopIfNextStopped(false);
         context.getConfig().setStopIfNextStopped(false);
 
-        List<Task<?>> startTasks = new ArrayList<>();
+        List<TransferableTask<?>> startTasks = new ArrayList<>();
         startTasks.add(task0);
         saggioTask.run(startTasks, taskExecutor, context);
     }
