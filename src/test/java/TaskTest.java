@@ -18,17 +18,27 @@ public class TaskTest {
 
         SaggioTask saggioTask = new SaggioTask();
 
-        TransferableTask<String> task0 = saggioTask.build("0", (ctx) -> new TaskResult<>("success", "0"), (res, ctx) -> System.out.println(res));
-        TransferableTask<String> taskA = saggioTask.build("A", (ctx) -> new TaskResult<>("success", "A-D1"), (res, ctx) -> System.out.println(res));
-        TransferableTask<String> taskB = saggioTask.build("B", (ctx) -> {
-            Thread.sleep(4000);
-            return new TaskResult<>("success", "B-D1");
-        }, (res, ctx) -> System.out.println(res));
-        TransferableTask<String> taskC = saggioTask.build("C", (ctx) -> {
-            Thread.sleep(4000);
-            return new TaskResult<>("success", "C-DE1");
-        }, (res, ctx) -> System.out.println(res));
-        TransferableTask<String> taskD = saggioTask.build("D", (ctx) -> new TaskResult<>("success", "D-E1"), (res, ctx) -> System.out.println(res));
+        TransferableTask<String> task0 = saggioTask.build("0",
+                (ctx) -> new TaskResult<>("success", "0"),
+                (res, ctx) -> System.out.println(res));
+        TransferableTask<String> taskA = saggioTask.build("A",
+                (ctx) -> new TaskResult<>("success", "A-D1"),
+                (res, ctx) -> System.out.println(res));
+        TransferableTask<String> taskB = saggioTask.build("B",
+                (ctx) -> {
+                    Thread.sleep(4000);
+                    return new TaskResult<>("success", "B-D1");
+                },
+                (res, ctx) -> System.out.println(res));
+        TransferableTask<String> taskC = saggioTask.build("C",
+                (ctx) -> {
+                    Thread.sleep(4000);
+                    return new TaskResult<>("success", "C-DE1");
+                },
+                (res, ctx) -> System.out.println(res));
+        TransferableTask<String> taskD = saggioTask.build("D",
+                (ctx) -> new TaskResult<>("success", "D-E1"),
+                (res, ctx) -> System.out.println(res));
         taskA.and(task0, "0");
         taskB.and(task0, "0");
         taskC.and(task0, "0");
@@ -44,7 +54,6 @@ public class TaskTest {
 
         TaskContext context = new TaskContext();
         context.getConfig().setTimeout(1000, TimeUnit.MILLISECONDS);
-//        context.getConfig().setStopIfNextStopped(false);
         context.getConfig().setStopIfNextStopped(false);
 
         List<TransferableTask<?>> startTasks = new ArrayList<>();

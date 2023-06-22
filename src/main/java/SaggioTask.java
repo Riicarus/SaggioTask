@@ -26,13 +26,25 @@ public class SaggioTask {
      * build a initial task with must attributes
      *
      * @param name task name
-     * @param taskFunction main task function
-     * @param callback callback function after task function's execution
-     * @param <T> type of taskFunction result's data
+     * @param taskFunc main task function
+     * @param <T> type of taskFunc result's data
      * @return initial task
      */
-    public <T> TransferableTask<T> build(String name, TaskFunction<T> taskFunction, TaskCallback<T> callback) {
-        return new TransferableTask<>(name, taskFunction, callback, this);
+    public <T> TransferableTask<T> build(String name, TaskFunction<T> taskFunc) {
+        return new TransferableTask<>(name, taskFunc, this);
+    }
+
+    /**
+     * build a initial task with must attributes
+     *
+     * @param name task name
+     * @param taskFunc main task function
+     * @param callback callback function after task function's execution
+     * @param <T> type of taskFunc result's data
+     * @return initial task
+     */
+    public <T> TransferableTask<T> build(String name, TaskFunction<T> taskFunc, TaskCallback<T> callback) {
+        return new TransferableTask<>(name, taskFunc, callback, this);
     }
 
     /**
@@ -40,13 +52,13 @@ public class SaggioTask {
      *
      * @param name task name
      * @param prevFunc function executed before task function's execution
-     * @param taskFunction main task function
+     * @param taskFunc main task function
      * @param callback callback function after task function's execution
-     * @param <T> type of taskFunction result's data
+     * @param <T> type of taskFunc result's data
      * @return initial task
      */
-    public <T> TransferableTask<T> build(String name, PrevTaskFunction prevFunc, TaskFunction<T> taskFunction, TaskCallback<T> callback) {
-        TransferableTask<T> task = new TransferableTask<>(name, taskFunction, callback, this);
+    public <T> TransferableTask<T> build(String name, PrevTaskFunction prevFunc, TaskFunction<T> taskFunc, TaskCallback<T> callback) {
+        TransferableTask<T> task = new TransferableTask<>(name, taskFunc, callback, this);
         task.setPrevFunc(prevFunc);
         return task;
     }
