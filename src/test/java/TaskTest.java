@@ -26,7 +26,7 @@ public class TaskTest {
                 (res, ctx) -> System.out.println(res));
         TransferableTask<String> taskB = saggioTask.build("B",
                 (ctx) -> {
-                    Thread.sleep(4000);
+                    Thread.sleep(5000);
                     return new TaskResult<>("success", "B-D1");
                 },
                 (res, ctx) -> System.out.println(res));
@@ -54,7 +54,7 @@ public class TaskTest {
 
         TaskContext context = new TaskContext();
         context.getConfig().setTimeout(1000, TimeUnit.MILLISECONDS);
-        context.getConfig().setStopIfNextStopped(false);
+        context.getConfig().setStopIfNextStopped(true);
 
         List<TransferableTask<?>> startTasks = new ArrayList<>();
         startTasks.add(task0);

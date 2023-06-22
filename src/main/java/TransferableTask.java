@@ -105,7 +105,7 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>> {
     }
 
     protected void addPrevTask(TransferableTask<?>... tasks) {
-        prevTasks.addAll(Arrays.stream(tasks).toList());
+        prevTasks.addAll(Arrays.asList(tasks));
     }
 
     protected void begin(ThreadPoolExecutor executor, TaskContext context) {
@@ -246,6 +246,7 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>> {
         private final Lock joinLock = new ReentrantLock();
         private final AtomicInteger notArrivedCount = new AtomicInteger();
         private volatile boolean executed = false;
+        private volatile boolean canceled = false;
         /**
          * The thread which is executing execute() method, may be block by canWork.acquire() and will be set to null when executed.
          */
@@ -269,6 +270,8 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>> {
          * @return if can work
          */
         public boolean waitToWork(TaskContext context) {
+//            System.out.println("enter wait, thread: " + Thread.currentThread());
+
             int _timeout = task.isUseCustomizedTimeout() ? task.getTimeout() : context.getConfig().getTimeout();
             TimeUnit _timeUnit = task.isUseCustomizedTimeout() ? task.getTimeUnit() : context.getConfig().getTimeUnit();
 
@@ -283,7 +286,7 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>> {
 
                 return true;
             } catch (InterruptedException e) {
-                System.out.println("TransferableTask[" + task + "] acquiring semaphore has been interrupted, caused by: " + e.getCause());
+                System.out.println("TransferableTask[" + task + "] acquiring semaphore has been interrupted");
 
                 handleInterrupted(context);
                 return false;
@@ -313,6 +316,7 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>> {
          */
         public void execute(ThreadPoolExecutor executor, TaskContext context, boolean isBegin) {
             currentThread = Thread.currentThread();
+            currentThread.setName("task-" + task.name);
 
             if (!isBegin) {
                 joinLock.unlock();
@@ -340,14 +344,14 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>> {
             boolean isBoot = false;
 
             // optimize
-            if (isExecuted() || (isExecuting() && TaskType.ANY.equals(task.getType()))) {
+            if (isExecuted() || isCanceled() || (isExecuting() && TaskType.ANY.equals(task.getType()))) {
                 return;
             }
 
             try {
                 joinLock.lock();
 
-                if (isExecuted()) {
+                if (isExecuted() || isCanceled()) {
                     return;
                 }
 
@@ -424,6 +428,7 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>> {
             stopAfterPrev(context);
 
             currentThread = null;
+            canceled = true;
         }
 
         /**
@@ -438,6 +443,7 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>> {
             stopAfterPrev(context);
 
             currentThread = null;
+            canceled = true;
         }
 
         /**
@@ -463,7 +469,7 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>> {
                 for (TransferableTask<?> prevTask : task.getPrevTasks()) {
                     if (prevTask.getSync().isExecuting()) {
                         try {
-                            System.out.println("Executing task[" + this + "] has been interrupted, caused by: stopPrevAny()");
+                            System.out.println("Executing task[" + prevTask + "] will be interrupted, caused by: stopPrevAny(), by task: " + task);
                             prevTask.getSync().getCurrentThread().interrupt();
                         } catch (NullPointerException ignored) {
                         }
@@ -486,7 +492,7 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>> {
                 for (TransferableTask<?> prevTask : task.getPrevTasks()) {
                     if (prevTask.getSync().isExecuting()) {
                         try {
-                            System.out.println("Executing task[" + task + "] has been interrupted, caused by: stopPrevAnd()");
+                            System.out.println("Executing task[" + task + "] will be interrupted, caused by: stopPrevAnd(), by task: " + task);
                             prevTask.getSync().getCurrentThread().interrupt();
                         } catch (NullPointerException ignored) {
                         }
@@ -515,7 +521,7 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>> {
                     if (TaskType.AND.equals(task.getType())) {
                         if (task.getSync().isExecuting()) {
                             try {
-                                System.out.println("Executing task[" + task + "] has been interrupted, caused by: tryStopAfterPrev()");
+                                System.out.println("Executing task[" + task + "] will be interrupted, caused by: tryStopAfterPrev(), by task: " + this.task);
                                 task.getSync().getCurrentThread().interrupt();
                             } catch (NullPointerException ignored) {
                             }
@@ -526,7 +532,7 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>> {
                         if (task.getSync().isExecuting() && task.getSync().getNotArrivedCount() == 1) {
                             // if only current task has not arrived, stop its next task
                             try {
-                                System.out.println("Executing task[" + task + "] has been interrupted, caused by: tryStopAfterPrev()");
+                                System.out.println("Executing task[" + task + "] will be interrupted, caused by: tryStopAfterPrev(), by task: " + this.task);
                                 task.getSync().getCurrentThread().interrupt();
                             } catch (NullPointerException ignored) {
                             }
@@ -537,11 +543,15 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>> {
         }
 
         public boolean isExecuting() {
-            return currentThread != null;
+            return currentThread != null && !canceled;
         }
 
         public boolean isExecuted() {
-            return executed;
+            return executed && !canceled;
+        }
+
+        public boolean isCanceled() {
+            return canceled;
         }
 
         public Thread getCurrentThread() {
