@@ -8,6 +8,16 @@ SaggioTask 是一个基于 Java 的复杂任务编排组件, 提供了便捷的�
 
 ## 快速入手
 
+### Maven 导入
+
+```pom
+<dependency>
+    <groupId>io.github.riicarus</groupId>
+    <artifactId>SaggioTask</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+
 ### 实例定义
 
 要使用 SaggioTask API, 需要先创建一个 `SaggioTask` 实例, 之后一系列的任务编排都是在该实例的上下文中完成的.
