@@ -17,7 +17,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * @create 2023-6-12 22:45
  * @since 1.0.0
  */
-public class TransferableTask<T> implements Transferable<TransferableTask<?>> {
+public class TransferableTask<T> implements Transferable<TransferableTask<?>>, Task<T> {
 
     protected final TaskSynchronizer<T> sync;
 
@@ -131,7 +131,8 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>> {
      * @param context TaskContext
      * @return TaskResult
      */
-    protected TaskResult<T> doExecute(TaskContext context) {
+    @Override
+    public TaskResult<T> doExecute(TaskContext context) {
         if (prevFunc != null) {
             prevFunc.execute(context);
         }
@@ -156,23 +157,41 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>> {
         }
     }
 
+    @Override
+    public HashSet<TransferableTask<?>> getPrevTasks() {
+        return prevTasks;
+    }
+
+    @Override
+    public String getName() {
+        return name;
+    }
+
+    @Override
+    public TaskType getType() {
+        return type;
+    }
+
+    @Override
+    public PrevTaskFunction getPrevFunc() {
+        return prevFunc;
+    }
+
+    @Override
+    public TaskFunction<T> getTaskFunc() {
+        return taskFunc;
+    }
+
+    @Override
+    public TaskCallback<T> getCallback() {
+        return callback;
+    }
+
     public TransferableTask<?> setTimeout(int timeout, TimeUnit timeUnit) {
         this.timeout = timeout;
         this.timeUnit = timeUnit;
         this.useCustomizedTimeout = true;
         return this;
-    }
-
-    public HashSet<TransferableTask<?>> getPrevTasks() {
-        return prevTasks;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public TaskType getType() {
-        return type;
     }
 
     public boolean isUseCustomizedTimeout() {
@@ -187,26 +206,6 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>> {
         return timeUnit;
     }
 
-    public SaggioTask getSaggioTask() {
-        return saggioTask;
-    }
-
-    public TaskSynchronizer<T> getSync() {
-        return sync;
-    }
-
-    public PrevTaskFunction getPrevFunc() {
-        return prevFunc;
-    }
-
-    public TaskFunction<T> getTaskFunc() {
-        return taskFunc;
-    }
-
-    public TaskCallback<T> getCallback() {
-        return callback;
-    }
-
     public void setPrevFunc(PrevTaskFunction prevFunc) {
         this.prevFunc = prevFunc;
     }
@@ -217,6 +216,14 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>> {
 
     protected void setType(TaskType type) {
         this.type = type;
+    }
+
+    public SaggioTask getSaggioTask() {
+        return saggioTask;
+    }
+
+    public TaskSynchronizer<T> getSync() {
+        return sync;
     }
 
     @Override
@@ -240,19 +247,19 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>> {
                 '}';
     }
 
-    private static class TaskSynchronizer<T> {
+    protected static class TaskSynchronizer<T> implements TaskSync {
         // locks and concurrent-working arrangement attributes
-        private final Semaphore canWork = new Semaphore(0);
-        private final Lock joinLock = new ReentrantLock();
-        private final AtomicInteger notArrivedCount = new AtomicInteger();
-        private volatile boolean executed = false;
-        private volatile boolean canceled = false;
+        final Semaphore canWork = new Semaphore(0);
+        final Lock joinLock = new ReentrantLock();
+        final AtomicInteger notArrivedCount = new AtomicInteger();
+        volatile boolean executed = false;
+        volatile boolean canceled = false;
         /**
          * The thread which is executing execute() method, may be block by canWork.acquire() and will be set to null when executed.
          */
-        private volatile Thread currentThread;
+        volatile Thread currentThread;
 
-        private final TransferableTask<T> task;
+        final TransferableTask<T> task;
 
         public TaskSynchronizer(TransferableTask<T> task) {
             if (task == null) {
@@ -269,6 +276,7 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>> {
          * @param context TaskContext
          * @return if can work
          */
+        @Override
         public boolean waitToWork(TaskContext context) {
 //            System.out.println("enter wait, thread: " + Thread.currentThread());
 
@@ -314,6 +322,7 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>> {
          * @param context TaskContext
          * @param isBegin is begin() execute, is is, the task will be immediately executed without any waiting
          */
+        @Override
         public void execute(ThreadPoolExecutor executor, TaskContext context, boolean isBegin) {
             currentThread = Thread.currentThread();
             currentThread.setName("task-" + task.name);
@@ -334,13 +343,14 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>> {
         }
 
         /**
-         * join() is the way to execute the next task or update next task's status, according to next task's working state.
+         * join() is the way to execute the current task or update current task's status, according to current task's working state. <br/>
+         * Executed by previous task.
          *
-         * @param prevTask previous taskFunc task
          * @param executor thread pool
          * @param context TaskContext
          */
-        public void join(TransferableTask<?> prevTask, ThreadPoolExecutor executor, TaskContext context) {
+        @Override
+        public void join(ThreadPoolExecutor executor, TaskContext context) {
             boolean isBoot = false;
 
             // optimize
@@ -389,6 +399,7 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>> {
          * @param executor thread pool
          * @param context TaskContext
          */
+        @Override
         public void next(String state, ThreadPoolExecutor executor, TaskContext context) {
             HashSet<TransferableTask<?>> nextTasks = task.getSaggioTask().getPushDownTable().getNextTasks(this.task, state);
             if (nextTasks == null || nextTasks.isEmpty()) {
@@ -407,7 +418,7 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>> {
          */
         private void executedAllNext(HashSet<TransferableTask<?>> nextTasks, ThreadPoolExecutor executor, TaskContext context) {
             for (TransferableTask<?> nextTask : nextTasks) {
-                executor.execute(() -> nextTask.getSync().join(this.task, executor, context));
+                executor.execute(() -> nextTask.getSync().join(executor, context));
             }
         }
 
@@ -421,6 +432,7 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>> {
          *
          * @param context TaskContext
          */
+        @Override
         public void handleInterrupted(TaskContext context) {
             // if the destination task is executing/waiting interrupted, the prev tasks are not needed to be executed.
             stopPrevAnd(context);
@@ -542,18 +554,22 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>> {
             }
         }
 
+        @Override
         public boolean isExecuting() {
             return currentThread != null && !canceled;
         }
 
+        @Override
         public boolean isExecuted() {
             return executed && !canceled;
         }
 
+        @Override
         public boolean isCanceled() {
             return canceled;
         }
 
+        @Override
         public Thread getCurrentThread() {
             return currentThread;
         }
