@@ -66,18 +66,18 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>>, T
      * link previous task to current one, meaning that if all previous tasks executed successfully and returned the given state, current task will be executed.
      *
      * @param prev previous task
-     * @param state transfer state
+     * @param fromState transfer state
      * @return current task
      */
     @Override
-    public TransferableTask<?> and(TransferableTask<?> prev, String state) {
+    public TransferableTask<?> and(TransferableTask<?> prev, String fromState) {
         if (type == null) {
             type = TaskType.AND;
         } else if (type.equals(TaskType.ANY)) {
             throw new RuntimeException("Type is already set to 'ANY', can not add task of type 'AND', task: " + this);
         }
 
-        saggioTask.getPushDownTable().add(prev, state, this);
+        saggioTask.getPushDownTable().add(prev, fromState, this);
         this.addPrevTask(prev);
 
         return this;
@@ -87,18 +87,18 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>>, T
      * link previous task to current one, meaning that if any previous tasks executed successfully and returned the given state, current task will be executed.
      *
      * @param prev previous task
-     * @param state transfer state
+     * @param fromState transfer state
      * @return current task
      */
     @Override
-    public TransferableTask<?> any(TransferableTask<?> prev, String state) {
+    public TransferableTask<?> any(TransferableTask<?> prev, String fromState) {
         if (type == null) {
             type = TaskType.ANY;
         } else if (type.equals(TaskType.AND)) {
             throw new RuntimeException("Type is already set to 'AND', can not add task of type 'ANY', task: " + this);
         }
 
-        saggioTask.getPushDownTable().add(prev, state, this);
+        saggioTask.getPushDownTable().add(prev, fromState, this);
         this.addPrevTask(prev);
 
         return this;
