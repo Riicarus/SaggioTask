@@ -23,7 +23,7 @@ public class SaggioTask {
     }
 
     /**
-     * build a initial task with must attributes
+     * build an initial task with needed attributes
      *
      * @param name task name
      * @param taskFunc main task function
@@ -35,7 +35,7 @@ public class SaggioTask {
     }
 
     /**
-     * build a initial task with must attributes
+     * build an initial task with needed attributes
      *
      * @param name task name
      * @param taskFunc main task function
@@ -48,7 +48,7 @@ public class SaggioTask {
     }
 
     /**
-     * build a initial task with must attributes
+     * build an initial task with needed attributes
      *
      * @param name task name
      * @param prevFunc function executed before task function's execution
@@ -64,7 +64,7 @@ public class SaggioTask {
     }
 
     /**
-     * generate a initial copy of the given task
+     * generate an initial copy of the given task
      *
      * @param name task name
      * @param srcTask the source task to be copied

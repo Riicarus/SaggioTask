@@ -119,7 +119,7 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>>, T
      *
      * @param executor thread pool
      * @param context TaskContext
-     * @param isBegin is begin() execute, is is, the task will be immediately executed without any waiting
+     * @param isBegin is begin() execute, that is, the task will be immediately executed without any waiting
      */
     protected void execute(ThreadPoolExecutor executor, TaskContext context, boolean isBegin) {
         sync.execute(executor, context, isBegin);
@@ -274,7 +274,7 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>>, T
          * or end to meet the timeout or being interrupted
          *
          * @param context TaskContext
-         * @return if can work
+         * @return if task can work
          */
         @Override
         public boolean waitToWork(TaskContext context) {
@@ -320,7 +320,7 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>>, T
          *
          * @param executor thread pool
          * @param context TaskContext
-         * @param isBegin is begin() execute, is is, the task will be immediately executed without any waiting
+         * @param isBegin is begin() execute, that is, the task will be immediately executed without any waiting
          */
         @Override
         public void execute(ThreadPoolExecutor executor, TaskContext context, boolean isBegin) {
@@ -514,7 +514,7 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>>, T
         }
 
         /**
-         * stop the task's all next executing tasks' prev tasks if need to stop according to the setting stopIfNextStopped
+         * stop the task's all next executing tasks' prev tasks if needed to stop according to the setting stopIfNextStopped
          *
          * @param context TaskContext
          */

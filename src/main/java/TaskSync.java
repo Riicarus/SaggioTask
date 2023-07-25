@@ -15,7 +15,7 @@ public interface TaskSync {
      * or end to meet the timeout or being interrupted
      *
      * @param context TaskContext
-     * @return if can work
+     * @return if task can work
      */
     boolean waitToWork(TaskContext context);
 
@@ -26,7 +26,7 @@ public interface TaskSync {
      *
      * @param executor thread pool
      * @param context TaskContext
-     * @param isBegin is begin() execute, is is, the task will be immediately executed without any waiting
+     * @param isBegin is begin() execute, that is, the task will be immediately executed without any waiting
      */
     void execute(ThreadPoolExecutor executor, TaskContext context, boolean isBegin);
 
