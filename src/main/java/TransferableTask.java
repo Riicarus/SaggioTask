@@ -1,3 +1,5 @@
+import exception.TaskArrangeException;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -74,7 +76,7 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>>, T
         if (type == null) {
             type = TaskType.AND;
         } else if (type.equals(TaskType.ANY)) {
-            throw new RuntimeException("Type is already set to 'ANY', can not add task of type 'AND', task: " + this);
+            throw new TaskArrangeException("Type is already set to 'ANY', can not add task of type 'AND', task: " + this);
         }
 
         saggioTask.getPushDownTable().add(prev, fromState, this);
@@ -95,7 +97,7 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>>, T
         if (type == null) {
             type = TaskType.ANY;
         } else if (type.equals(TaskType.AND)) {
-            throw new RuntimeException("Type is already set to 'AND', can not add task of type 'ANY', task: " + this);
+            throw new TaskArrangeException("Type is already set to 'AND', can not add task of type 'ANY', task: " + this);
         }
 
         saggioTask.getPushDownTable().add(prev, fromState, this);
