@@ -175,7 +175,7 @@ context.getConfig().setTimeout(1000, TimeUnit.MILLISECONDS);
 
 对于一些任务编排场景来说, 如果按编排方法: `taskA("A-D") & taskB("B-D") & taskC("C-D") -> taskD`:
 
-如果 `taskA` 执行失败, 为了执行效率, 需要同时终止 `taskB` 和 `taskC`, 此时可以使用 `TaskConfig#setStopIfNextStopped(true)` 方法来使任务在执行过程中, 如果后续任务无法执行, 自动停止其前面的所有任务.
+如果 `taskA` 执行失败, 为了执行效率, 需要同时终止 `taskB` 和 `taskC`, 此时可以使用 `TaskConfig#setRecursivelyStop(true)` 方法来使任务在执行过程中, 如果后续任务无法执行, 自动停止其前面的所有任务.
 
 该设置同样对以下情况生效:
 
@@ -186,7 +186,7 @@ context.getConfig().setTimeout(1000, TimeUnit.MILLISECONDS);
 
 ```java
 TaskContext context = new TaskContext();
-context.getConfig().setStopIfNextStopped(true);
+context.getConfig().setRecursivelyStop(true);
 ```
 
 反之, 如果将其设置为 `false`, 则相关任务的前置任务无论如何都需要执行结束, 不会被提前终止.
