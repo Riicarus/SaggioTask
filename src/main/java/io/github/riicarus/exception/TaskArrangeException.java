@@ -1,11 +1,11 @@
-package exception;
+package io.github.riicarus.exception;
 
 /**
  * Runtime exception when task arrangement failed
  *
  * @author Riicarus
  * @create 2023-7-27 8:10
- * @since 1.0.0
+ * @since 1.0.2
  */
 public class TaskArrangeException extends RuntimeException {
 

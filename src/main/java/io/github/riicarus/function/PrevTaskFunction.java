@@ -1,3 +1,7 @@
+package io.github.riicarus.function;
+
+import io.github.riicarus.TaskContext;
+
 /**
  * [FEATURE INFO]<br/>
  * function execute before task execution

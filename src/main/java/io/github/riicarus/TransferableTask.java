@@ -1,4 +1,9 @@
-import exception.TaskArrangeException;
+package io.github.riicarus;
+
+import io.github.riicarus.exception.TaskArrangeException;
+import io.github.riicarus.function.PrevTaskFunction;
+import io.github.riicarus.function.TaskCallback;
+import io.github.riicarus.function.TaskFunction;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -475,7 +480,7 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>>, T
          * @param context TaskContext
          */
         private void stopPrevAny(TaskContext context) {
-            if (!context.getConfig().isStopIfNextStopped()) {
+            if (!context.getConfig().isRecursivelyStop()) {
                 return;
             }
 
@@ -498,7 +503,7 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>>, T
          * @param context TaskContext
          */
         private void stopPrevAnd(TaskContext context) {
-            if (!context.getConfig().isStopIfNextStopped()) {
+            if (!context.getConfig().isRecursivelyStop()) {
                 return;
             }
 
@@ -521,7 +526,7 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>>, T
          * @param context TaskContext
          */
         private void stopAfterPrev(TaskContext context) {
-            if (!context.getConfig().isStopIfNextStopped()) {
+            if (!context.getConfig().isRecursivelyStop()) {
                 return;
             }
 

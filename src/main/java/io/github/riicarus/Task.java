@@ -1,3 +1,9 @@
+package io.github.riicarus;
+
+import io.github.riicarus.function.PrevTaskFunction;
+import io.github.riicarus.function.TaskCallback;
+import io.github.riicarus.function.TaskFunction;
+
 import java.util.HashSet;
 
 /**

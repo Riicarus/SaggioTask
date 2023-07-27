@@ -1,3 +1,5 @@
+package io.github.riicarus;
+
 /**
  * [FEATURE INFO]<br/>
  * type of a condition

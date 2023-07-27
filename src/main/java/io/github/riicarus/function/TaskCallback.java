@@ -1,3 +1,8 @@
+package io.github.riicarus.function;
+
+import io.github.riicarus.TaskContext;
+import io.github.riicarus.TaskResult;
+
 /**
  * [FEATURE INFO]<br/>
  *

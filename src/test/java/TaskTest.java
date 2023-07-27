@@ -1,3 +1,8 @@
+import io.github.riicarus.SaggioTask;
+import io.github.riicarus.TaskContext;
+import io.github.riicarus.TaskResult;
+import io.github.riicarus.TransferableTask;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -54,7 +59,7 @@ public class TaskTest {
 
         TaskContext context = new TaskContext();
         context.getConfig().setTimeout(1000, TimeUnit.MILLISECONDS);
-        context.getConfig().setStopIfNextStopped(true);
+        context.getConfig().setRecursivelyStop(true);
 
         List<TransferableTask<?>> startTasks = new ArrayList<>();
         startTasks.add(task0);

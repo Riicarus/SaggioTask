@@ -1,3 +1,5 @@
+package io.github.riicarus;
+
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -13,7 +15,10 @@ public class TaskConfig {
     private int timeout = 3000;
     private TimeUnit timeUnit = TimeUnit.MILLISECONDS;
 
-    private boolean stopIfNextStopped = true;
+    /**
+     * Indicating that whether the task should be recursively stopped when one task fails or meets a timeout.
+     */
+    private boolean recursivelyStop = true;
 
     public int getTimeout() {
         return timeout;
@@ -30,12 +35,12 @@ public class TaskConfig {
     }
 
     @SuppressWarnings("all")
-    public boolean isStopIfNextStopped() {
-        return stopIfNextStopped;
+    public boolean isRecursivelyStop() {
+        return recursivelyStop;
     }
 
-    public TaskConfig setStopIfNextStopped(boolean stopIfNextStopped) {
-        this.stopIfNextStopped = stopIfNextStopped;
+    public TaskConfig setRecursivelyStop(boolean recursivelyStop) {
+        this.recursivelyStop = recursivelyStop;
         return this;
     }
 }

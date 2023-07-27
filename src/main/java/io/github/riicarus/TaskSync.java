@@ -1,3 +1,5 @@
+package io.github.riicarus;
+
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
