@@ -4,6 +4,7 @@ import io.github.riicarus.function.PrevTaskFunction;
 import io.github.riicarus.function.TaskCallback;
 import io.github.riicarus.function.TaskFunction;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -25,6 +26,8 @@ public class SaggioTask {
 
     private final TaskPushDownTable PUSH_DOWN_TABLE = new TaskPushDownTable();
 
+    private final HashMap<String, TransferableTask<?>> TASKS = new HashMap<>();
+
     public SaggioTask() {
     }
 
@@ -37,7 +40,10 @@ public class SaggioTask {
      * @return initial task
      */
     public <T> TransferableTask<T> build(String name, TaskFunction<T> taskFunc) {
-        return new TransferableTask<>(name, taskFunc, this);
+        TransferableTask<T> task = new TransferableTask<>(name, taskFunc, this);
+        TASKS.put(task.getName(), task);
+
+        return task;
     }
 
     /**
@@ -50,7 +56,10 @@ public class SaggioTask {
      * @return initial task
      */
     public <T> TransferableTask<T> build(String name, TaskFunction<T> taskFunc, TaskCallback<T> callback) {
-        return new TransferableTask<>(name, taskFunc, callback, this);
+        TransferableTask<T> task = new TransferableTask<>(name, taskFunc, callback, this);
+        TASKS.put(task.getName(), task);
+
+        return task;
     }
 
     /**
@@ -66,6 +75,9 @@ public class SaggioTask {
     public <T> TransferableTask<T> build(String name, PrevTaskFunction prevFunc, TaskFunction<T> taskFunc, TaskCallback<T> callback) {
         TransferableTask<T> task = new TransferableTask<>(name, taskFunc, callback, this);
         task.setPrevFunc(prevFunc);
+
+        TASKS.put(task.getName(), task);
+
         return task;
     }
 
@@ -98,7 +110,11 @@ public class SaggioTask {
         return taskCount.getAndIncrement();
     }
 
-    public TaskPushDownTable getPushDownTable() {
+    protected TaskPushDownTable getPushDownTable() {
         return PUSH_DOWN_TABLE;
+    }
+
+    public TransferableTask<?> getTask(String name) {
+        return TASKS.get(name);
     }
 }

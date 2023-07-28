@@ -45,6 +45,8 @@ public class TransferableTask<T> implements Transferable<TransferableTask<?>>, T
     protected int timeout = 3000;
     protected TimeUnit timeUnit = TimeUnit.MILLISECONDS;
 
+    public static int DEFAULT_TIMEOUT = 3000;
+
     public TransferableTask(String name, TaskFunction<T> taskFunc, SaggioTask saggioTask) {
         this.sync = new TaskSynchronizer<>(this);
         this.name = name;
