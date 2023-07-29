@@ -1,5 +1,6 @@
 package io.github.riicarus;
 
+import io.github.riicarus.dsl.TaskArrangeDSLParser;
 import io.github.riicarus.function.PrevTaskFunction;
 import io.github.riicarus.function.TaskCallback;
 import io.github.riicarus.function.TaskFunction;
@@ -27,6 +28,8 @@ public class SaggioTask {
     private final TaskPushDownTable PUSH_DOWN_TABLE = new TaskPushDownTable();
 
     private final HashMap<String, TransferableTask<?>> TASKS = new HashMap<>();
+
+    private final TaskArrangeDSLParser dslParser = new TaskArrangeDSLParser(this);
 
     public SaggioTask() {
     }
@@ -91,6 +94,10 @@ public class SaggioTask {
      */
     public <T> TransferableTask<T> buildFrom(String name, TransferableTask<T> srcTask) {
         return build(name, srcTask.getPrevFunc(), srcTask.getTaskFunc(), srcTask.getCallback());
+    }
+
+    public void arrange(String arrangement) {
+        dslParser.parse(arrangement);
     }
 
     /**

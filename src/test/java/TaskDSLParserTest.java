@@ -2,7 +2,6 @@ import io.github.riicarus.SaggioTask;
 import io.github.riicarus.TaskContext;
 import io.github.riicarus.TaskResult;
 import io.github.riicarus.TransferableTask;
-import io.github.riicarus.dsl.TaskArrangeDSLParser;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,12 +44,10 @@ public class TaskDSLParserTest {
                 (ctx) -> new TaskResult<>("success", "D-E1"),
                 (res, ctx) -> System.out.println(res));
 
-        TaskArrangeDSLParser parser = new TaskArrangeDSLParser(saggioTask);
-        parser.parse("task#0, task0#aa & taskA, taskB, taskC @1000");
+        saggioTask.arrange("task#0, task0#aa & taskA, taskB, taskC @1000");
 
         ThreadPoolExecutor taskExecutor = new ThreadPoolExecutor(20, 50, 100, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(10));
         TaskContext context = new TaskContext();
-        context.getConfig().setTimeout(1000, TimeUnit.MILLISECONDS);
         context.getConfig().setRecursivelyStop(true);
 
         List<TransferableTask<?>> startTasks = new ArrayList<>();

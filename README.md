@@ -190,3 +190,32 @@ context.getConfig().setRecursivelyStop(true);
 ```
 
 反之, 如果将其设置为 `false`, 则相关任务的前置任务无论如何都需要执行结束, 不会被提前终止.
+
+### 快捷编排
+
+上面使用纯代码对 `Task` 对象进行编排的过程中很麻烦, 我们提供了相对快捷的编排方式: 使用一种简单的 `dsl` 进行编排.
+
+如: 对于编排方法: `taskA("A-D") & taskB("B-D") & taskC("C-D") -> taskD`:
+
+使用内置的 dsl 表述为: `taskA#A-D, taskB#B-D, taskC#C-D & taskD @3000`.
+
+使用 `SaggioTask#arrange()` 方法对任务进行快捷编排, 使用任务的名称对任务进行指代, 需要任务预先被注册到 `SaggioTask` 中(在 `SaggioTask#build()` 方法中自动完成).
+
+```java
+saggioTask.arrange("task#0, task0#aa & taskA, taskB, taskC @1000");
+```
+
+#### DSL 简易语法
+
+由于是一个很简单的语法, 我们遵从一个固定的格式:
+
+`taskName#state[, taskName@state...] LINKER taskName[, taskName...] @timeout`
+
+- `LINKER` 表示 task 之间的关系, 是 `AND` 还是 `ANY`, 对应值为: `&` 或 `|`.
+- `LINKER` 之前的部分我们称之为 `FromTaskEntry`, 包含两个部分:
+  - `taskName` 是 task 在 `SaggioTask` 中注册的名称.
+  - `state` 是 task 返回的 `state` 值.
+  - `taskName` 和 `state` 之间使用 `#` 隔开, 不能有空格.
+- `LINKER` 之后的部分我们称之为 `ToTask`, 表示 `FromTaskEntry` 执行成功后需要执行的下一步的 task(s).
+- `@timeout` 用于指定当前编排任务的过期时间, 单位为 `ms`, 注意不能有空格.
+- 除特殊指定不能有空格的结构外, 其余结构使用一个空格隔开.
